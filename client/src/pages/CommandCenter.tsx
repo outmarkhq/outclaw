@@ -242,10 +242,10 @@ export default function CommandCenter() {
           "  -e SETUP_PASSWORD=your-password \\",
           "  -e GITHUB_TOKEN=your-github-pat \\",
           "  -e GITHUB_WORKSPACE_REPO=your-org/outclaw-workspace \\",
-          "  chrysb/alphaclaw:latest",
+          "  outmarkhq/alphaclaw:latest",
           "",
           "# Or install via npm",
-          "npm install @chrysb/alphaclaw",
+          "npm install @outmarkhq/alphaclaw",
           "npx alphaclaw start",
         ].join("\n")}
       </pre>

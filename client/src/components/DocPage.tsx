@@ -143,7 +143,7 @@ export default function DocPage({ title, subtitle, icon, children, prevPage, nex
               FAQ
             </Link>
             <a
-              href="https://github.com/chrysb/alphaclaw"
+              href="https://github.com/outmarkhq/alphaclaw"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[12px] transition-colors"

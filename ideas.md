@@ -1,4 +1,4 @@
-# OpenClaw B2B Marketing Docs — Design Brainstorm
+# Outclaw B2B Marketing Docs — Design Brainstorm
 
 <response>
 <text>
@@ -34,7 +34,7 @@
 <text>
 ## Idea 2: "Maritime Technical Manual" — Nautical Documentation
 
-**Design Movement**: Inspired by naval operations manuals, maritime charts, and the OpenClaw lobster/ocean branding. A warm, textured documentation style that feels like a captain's logbook.
+**Design Movement**: Inspired by naval operations manuals, maritime charts, and the Outclaw lobster/ocean branding. A warm, textured documentation style that feels like a captain's logbook.
 
 **Core Principles**:
 1. Warm, paper-like backgrounds with subtle texture (parchment grain)
@@ -42,7 +42,7 @@
 3. Structured layouts inspired by naval technical manuals — clear sections, numbered procedures
 4. Illustrations and diagrams that feel hand-drawn or engraved
 
-**Color Philosophy**: Off-white parchment base (#f5f0e8) with deep navy (#1a2744) for text and headers. Coral red (#e05252) for the OpenClaw brand accent. Teal (#2a7f8e) for links and interactive elements. Gold (#c4953a) for highlights and badges. The palette connects to the ocean/lobster identity while maintaining readability.
+**Color Philosophy**: Off-white parchment base (#f5f0e8) with deep navy (#1a2744) for text and headers. Coral red (#e05252) for the Outclaw brand accent. Teal (#2a7f8e) for links and interactive elements. Gold (#c4953a) for highlights and badges. The palette connects to the ocean/lobster identity while maintaining readability.
 
 **Layout Paradigm**: Two-column layout with a persistent left navigation styled as a ship's manifest. Main content uses wide margins with marginal notes (like Tufte-style sidenotes). Section breaks use wave-pattern SVG dividers.
 

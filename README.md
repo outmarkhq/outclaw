@@ -37,7 +37,7 @@ Outclaw is an open-source AI marketing command center built on the MKT1 team fra
 - Agent roster with capability management
 - Bring-your-own LLM (OpenAI, Anthropic, Azure, local models)
 - Browser automation via Browser Harness
-- AlphaClaw/OpenClaw orchestration engine support
+- AlphaClaw/Outclaw orchestration engine support
 - MySQL database with Drizzle ORM
 - S3-compatible file storage
 
@@ -295,13 +295,13 @@ OPENAI_MODEL=llama3.1
 
 ## AlphaClaw Setup
 
-[AlphaClaw](https://github.com/chrysb/alphaclaw) is the orchestration engine that manages agent lifecycles, watchdog monitoring, Git-based config sync, and channel routing.
+[AlphaClaw](https://github.com/outmarkhq/alphaclaw) is the orchestration engine that manages agent lifecycles, watchdog monitoring, Git-based config sync, and channel routing.
 
 ### Installation
 
 ```bash
 # Clone AlphaClaw alongside Outclaw
-git clone https://github.com/chrysb/alphaclaw.git
+git clone https://github.com/outmarkhq/alphaclaw.git
 cd alphaclaw
 chmod +x setup.sh
 ./setup.sh

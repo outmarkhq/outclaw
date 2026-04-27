@@ -349,9 +349,9 @@ export default function Troubleshooting() {
         If you encounter an issue not listed here, check these resources:
       </p>
       <ul>
-        <li><a href="https://github.com/chrysb/alphaclaw" target="_blank" rel="noopener noreferrer">AlphaClaw Official Documentation</a></li>
+        <li><a href="https://github.com/outmarkhq/alphaclaw" target="_blank" rel="noopener noreferrer">AlphaClaw Official Documentation</a></li>
         <li><a href="https://github.com/alphaclaw/alphaclaw/issues" target="_blank" rel="noopener noreferrer">AlphaClaw GitHub Issues</a></li>
-        <li><a href="https://github.com/chrysb/alphaclaw" target="_blank" rel="noopener noreferrer">Command Center Documentation</a></li>
+        <li><a href="https://github.com/outmarkhq/alphaclaw" target="_blank" rel="noopener noreferrer">Command Center Documentation</a></li>
         <li><a href="https://discord.gg/alphaclaw" target="_blank" rel="noopener noreferrer">AlphaClaw Discord Community</a></li>
       </ul>
     </DocPage>

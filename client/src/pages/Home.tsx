@@ -882,7 +882,7 @@ export default function Home() {
                 label: "Open",
                 links: [
                   { text: "GitHub", href: "https://github.com/outmarkhq/outclaw" },
-                  { text: "AlphaClaw", href: "https://github.com/chrysb/alphaclaw" },
+                  { text: "AlphaClaw", href: "https://github.com/outmarkhq/alphaclaw" },
                   { text: "Browser Harness", href: "https://github.com/browser-use/browser-harness" },
                 ],
               },

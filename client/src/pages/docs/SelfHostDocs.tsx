@@ -210,7 +210,7 @@ const sections: DocSection[] = [
         <Paragraph>
           Powered by{" "}
           <a
-            href="https://github.com/chrysb/alphaclaw"
+            href="https://github.com/outmarkhq/alphaclaw"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#F5C542] hover:underline"
@@ -1029,7 +1029,7 @@ docker compose exec app pnpm db:push`}</CodeBlock>
         <Paragraph>
           Outclaw is designed to remain compatible with future versions of{" "}
           <a
-            href="https://github.com/chrysb/alphaclaw"
+            href="https://github.com/outmarkhq/alphaclaw"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#F5C542] hover:underline"
@@ -1045,7 +1045,7 @@ docker compose exec app pnpm db:push`}</CodeBlock>
           >
             browser-harness
           </a>
-          , and OpenClaw. Dependency versions are pinned in{" "}
+          , and Outclaw. Dependency versions are pinned in{" "}
           <code className="text-[#F5F1E8]/65 bg-[#F5F1E8]/8 px-1.5 py-0.5 text-xs font-mono">package.json</code> and
           tested against the latest releases before each Outclaw update.
         </Paragraph>

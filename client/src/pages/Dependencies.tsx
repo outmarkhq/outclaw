@@ -26,7 +26,7 @@ export default function Dependencies() {
         <tbody>
           <tr><td>Node.js</td><td>24.x</td><td>AlphaClaw runtime</td><td><code>nvm install 24</code> (auto-installed by setup.sh)</td></tr>
           <tr><td>npm</td><td>10.9.2</td><td>Package manager</td><td>Comes with Node.js</td></tr>
-          <tr><td>AlphaClaw</td><td>latest</td><td>Agent framework + management harness</td><td><code>npm install -g @chrysb/alphaclaw</code></td></tr>
+          <tr><td>AlphaClaw</td><td>latest</td><td>Agent framework + management harness</td><td><code>npm install -g @outmarkhq/alphaclaw</code></td></tr>
           <tr><td>Python</td><td>3.9+</td><td>Model remapping proxy, browser-harness, scripts</td><td>python.org or system package manager</td></tr>
           <tr><td>browser-harness</td><td>latest</td><td>CDP-based browser access for all agents</td><td><code>pip install browser-harness</code></td></tr>
           <tr><td>Git</td><td>2.43.0</td><td>Version control</td><td>git-scm.com</td></tr>
@@ -152,7 +152,7 @@ fi
 if command -v alphaclaw &> /dev/null; then
   echo "✓ AlphaClaw $(alphaclaw --version 2>&1 | head -1)"
 else
-  echo "✗ AlphaClaw not found (run: npm install -g @chrysb/alphaclaw)"
+  echo "✗ AlphaClaw not found (run: npm install -g @outmarkhq/alphaclaw)"
 fi
 
 # browser-harness

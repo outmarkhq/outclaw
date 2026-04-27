@@ -64,7 +64,7 @@
 - [x] Tests and checkpoint (19 tests passing)
 
 ## AlphaClaw Replacement & Browser Harness Integration
-- [x] Research AlphaClaw repo (https://github.com/chrysb/alphaclaw) — architecture, config format, capabilities
+- [x] Research AlphaClaw repo (https://github.com/outmarkhq/alphaclaw) — architecture, config format, capabilities
 - [x] Research Browser Harness repo (https://github.com/browser-use/browser-harness) — how it provides browser access
 - [x] Replace all OpenClaw references with AlphaClaw across entire codebase
 - [x] Customize AlphaClaw config for MKT1 21-agent marketing team

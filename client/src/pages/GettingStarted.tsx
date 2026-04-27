@@ -199,7 +199,7 @@ nvm use 24`}
 
       <h3>2. Install AlphaClaw, Command Center, and Browser Harness</h3>
       <pre className="bg-slate-800 text-slate-100 p-5 rounded-xl text-sm overflow-x-auto my-4">
-{`npm install -g @chrysb/alphaclaw
+{`npm install -g @outmarkhq/alphaclaw
 pip install browser-harness`}
       </pre>
 

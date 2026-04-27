@@ -4,7 +4,7 @@
  * This module provides a stable interface between Outclaw and the underlying
  * orchestration engine (currently AlphaClaw). By routing all engine interactions
  * through this abstraction, Outclaw remains compatible with future versions of
- * AlphaClaw, OpenClaw, or any other orchestration backend.
+ * AlphaClaw, Outclaw, or any other orchestration backend.
  *
  * To swap engines:
  *   1. Implement the OrchestrationEngine interface
@@ -50,7 +50,7 @@ export interface TaskResult {
 }
 
 export interface OrchestrationEngine {
-  /** Engine identifier (e.g., "alphaclaw", "openclaw") */
+  /** Engine identifier (e.g., "alphaclaw", "outclaw") */
   readonly engineId: string;
 
   /** Engine version string */
@@ -103,7 +103,7 @@ export interface BrowserCapability {
 
 // ── Engine Factory ────────────────────────────────────────────────────
 
-export type EngineType = "alphaclaw" | "openclaw" | "custom";
+export type EngineType = "alphaclaw" | "outclaw" | "custom";
 
 /**
  * Supported engine configurations.
@@ -118,10 +118,10 @@ export const SUPPORTED_ENGINES: Record<
     description: "Default orchestration engine with management UI and watchdog",
     configKeys: ["ALPHACLAW_CONFIG_PATH"],
   },
-  openclaw: {
-    name: "OpenClaw",
+  outclaw: {
+    name: "Outclaw",
     description: "Core orchestration framework",
-    configKeys: ["OPENCLAW_CONFIG_PATH"],
+    configKeys: ["OUTCLAW_CONFIG_PATH"],
   },
   custom: {
     name: "Custom Engine",
