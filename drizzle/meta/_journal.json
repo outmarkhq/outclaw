@@ -22,6 +22,27 @@
       "when": 1775249993439,
       "tag": "0002_jittery_vulture",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1777315963718,
+      "tag": "0003_famous_hairball",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1777324972520,
+      "tag": "0004_supreme_captain_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1777327345129,
+      "tag": "0005_black_eddie_brock",
+      "breakpoints": true
     }
   ]
 }

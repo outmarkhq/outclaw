@@ -16,6 +16,7 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  passwordHash: text("passwordHash"),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -42,6 +43,7 @@ export const workspaces = mysqlTable("workspaces", {
   llmProvider: varchar("llmProvider", { length: 64 }),
   llmModel: varchar("llmModel", { length: 128 }),
   llmApiKeyEncrypted: text("llmApiKeyEncrypted"),
+  llmBaseUrl: text("llmBaseUrl"),
   portkeyVirtualKey: varchar("portkeyVirtualKey", { length: 255 }),
   // Channel configuration
   telegramBotToken: text("telegramBotToken"),
@@ -163,3 +165,53 @@ export const auditLog = mysqlTable("audit_log", {
 
 export type AuditLogEntry = typeof auditLog.$inferSelect;
 export type InsertAuditLogEntry = typeof auditLog.$inferInsert;
+
+// ── Chat Messages ────────────────────────────────────────────────────────────
+export const chatMessages = mysqlTable("chat_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  workspaceId: int("workspaceId").notNull(),
+  userId: int("userId").notNull(),
+  agentId: varchar("agentId", { length: 128 }),
+  role: mysqlEnum("role", ["user", "assistant", "system"]).notNull(),
+  content: text("content").notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
+// ── Cron Jobs ────────────────────────────────────────────────────────────────
+export const cronJobs = mysqlTable("cron_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  workspaceId: int("workspaceId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  cronExpression: varchar("cronExpression", { length: 128 }).notNull(),
+  taskTemplate: json("taskTemplate"),
+  agentId: varchar("agentId", { length: 128 }),
+  enabled: boolean("enabled").default(true).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  nextRunAt: timestamp("nextRunAt"),
+  runCount: int("runCount").default(0).notNull(),
+  status: mysqlEnum("status", ["active", "paused", "error"]).default("active").notNull(),
+  createdByUserId: int("createdByUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CronJob = typeof cronJobs.$inferSelect;
+export type InsertCronJob = typeof cronJobs.$inferInsert;
+
+// ── Password Reset Tokens ────────────────────────────────────────────────────
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;

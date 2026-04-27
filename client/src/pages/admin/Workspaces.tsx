@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { getLoginUrl } from "@/const";
+
 import { toast } from "sonner";
 
 export default function AdminWorkspaces() {
@@ -27,7 +27,7 @@ export default function AdminWorkspaces() {
 
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = getLoginUrl();
+      window.location.href = "/login";
     }
     if (!loading && user && user.role !== "admin") {
       setLocation("/cc");

@@ -1,5 +1,5 @@
 /**
- * Manus Debug Collector (agent-friendly)
+ * Debug Collector (agent-friendly)
  *
  * Captures:
  * 1) Console logs
@@ -133,7 +133,7 @@
   function shouldIgnoreTarget(target) {
     try {
       if (!target || !(target instanceof Element)) return false;
-      return !!target.closest(".manus-no-record");
+      return !!target.closest(".debug-no-record");
     } catch (e) {
       return false;
     }
@@ -807,7 +807,7 @@
   try {
     installUiEventListeners();
   } catch (e) {
-    console.warn("[Manus] Failed to install UI listeners:", e);
+    console.warn("[Debug] Failed to install UI listeners:", e);
   }
 
   // Mark as initialized
@@ -817,5 +817,5 @@
     forceReport: reportLogs,
   };
 
-  console.debug("[Manus] Debug collector initialized (no rrweb, UI events only)");
+  console.debug("[Debug] Debug collector initialized (no rrweb, UI events only)");
 })();

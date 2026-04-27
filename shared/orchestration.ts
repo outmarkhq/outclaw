@@ -50,7 +50,7 @@ export interface TaskResult {
 }
 
 export interface OrchestrationEngine {
-  /** Engine identifier (e.g., "alphaclaw", "outclaw") */
+  /** Engine identifier (e.g., "alphaclaw", "openclaw") */
   readonly engineId: string;
 
   /** Engine version string */

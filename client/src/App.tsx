@@ -8,8 +8,13 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 // Lazy imports for code splitting
 import { lazy, Suspense } from "react";
 
-// Public pages
+// App entry (login gate)
 const Home = lazy(() => import("./pages/Home"));
+
+// Login / Register / Password Reset
+const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // Onboarding
 const Onboarding = lazy(() => import("./pages/Onboarding"));
@@ -20,15 +25,14 @@ const CCTasks = lazy(() => import("./pages/cc/Tasks"));
 const CCAgents = lazy(() => import("./pages/cc/Agents"));
 const CCSettings = lazy(() => import("./pages/cc/Settings"));
 const CCNewRequest = lazy(() => import("./pages/cc/NewRequest"));
+const CCChat = lazy(() => import("./pages/cc/Chat"));
+const CCAuditLog = lazy(() => import("./pages/cc/AuditLog"));
+const CCCronJobs = lazy(() => import("./pages/cc/CronJobs"));
 
 // Admin
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminWorkspaces = lazy(() => import("./pages/admin/Workspaces"));
 const AdminMonitoring = lazy(() => import("./pages/admin/Monitoring"));
-
-// Documentation
-const SaaSDocs = lazy(() => import("./pages/docs/SaaSDocs"));
-const SelfHostDocs = lazy(() => import("./pages/docs/SelfHostDocs"));
 
 function PageLoader() {
   return (
@@ -45,8 +49,13 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        {/* Public landing */}
+        {/* App entry — login gate or redirect to dashboard */}
         <Route path="/" component={Home} />
+
+        {/* Custom email/password auth */}
+        <Route path="/login" component={Login} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
 
         {/* Onboarding wizard */}
         <Route path="/onboarding" component={Onboarding} />
@@ -57,15 +66,14 @@ function Router() {
         <Route path="/cc/agents" component={CCAgents} />
         <Route path="/cc/settings" component={CCSettings} />
         <Route path="/cc/new-request" component={CCNewRequest} />
+        <Route path="/cc/chat" component={CCChat} />
+        <Route path="/cc/audit" component={CCAuditLog} />
+        <Route path="/cc/cron" component={CCCronJobs} />
 
         {/* Admin panel */}
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/workspaces" component={AdminWorkspaces} />
         <Route path="/admin/monitoring" component={AdminMonitoring} />
-
-        {/* Documentation */}
-        <Route path="/docs" component={SaaSDocs} />
-        <Route path="/docs/self-host" component={SelfHostDocs} />
 
         {/* Fallback */}
         <Route path="/404" component={NotFound} />

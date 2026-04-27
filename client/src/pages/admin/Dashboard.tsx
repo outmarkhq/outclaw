@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { getLoginUrl } from "@/const";
+
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -19,7 +19,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = getLoginUrl();
+      window.location.href = "/login";
     }
     if (!loading && user && user.role !== "admin") {
       setLocation("/cc");

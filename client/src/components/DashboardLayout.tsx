@@ -19,14 +19,17 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
+
 import { useIsMobile } from "@/hooks/useMobile";
 import {
+  Activity,
   Bot,
+  Clock,
   Gauge,
   LayoutDashboard,
   ListTodo,
   LogOut,
+  MessageSquare,
   PanelLeft,
   Plus,
   Server,
@@ -41,9 +44,12 @@ import { Button } from "./ui/button";
 
 const CC_MENU = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/cc" },
+  { icon: MessageSquare, label: "Chat", path: "/cc/chat" },
   { icon: ListTodo, label: "Tasks", path: "/cc/tasks" },
   { icon: Bot, label: "Agents", path: "/cc/agents" },
   { icon: Plus, label: "New Request", path: "/cc/new-request" },
+  { icon: Clock, label: "Scheduled Jobs", path: "/cc/cron" },
+  { icon: Activity, label: "Audit Log", path: "/cc/audit" },
   { icon: Settings, label: "Settings", path: "/cc/settings" },
 ];
 
@@ -96,7 +102,7 @@ export default function DashboardLayout({
           </div>
           <Button
             onClick={() => {
-              window.location.href = getLoginUrl();
+              window.location.href = "/login";
             }}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"

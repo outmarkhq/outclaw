@@ -1,4 +1,4 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
@@ -6,6 +6,12 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 import * as db from "./db";
 import { nanoid } from "nanoid";
+import bcrypt from "bcryptjs";
+import { sdk } from "./_core/sdk";
+import { invokeLLM } from "./_core/llm";
+import { getProvider, getProviderBaseUrl } from "@shared/llmProviders";
+import { sendWelcomeEmail, sendPasswordResetEmail } from "./email";
+import crypto from "crypto";
 
 // ── Default agent definitions (the 21 MKT1 agents) ────────────────────
 const DEFAULT_AGENTS = [
@@ -97,6 +103,7 @@ const workspaceRouter = router({
       if (input.data?.llmProvider) updateData.llmProvider = input.data.llmProvider;
       if (input.data?.llmModel) updateData.llmModel = input.data.llmModel;
       if (input.data?.llmApiKey) updateData.llmApiKeyEncrypted = input.data.llmApiKey; // TODO: encrypt
+      if (input.data?.llmBaseUrl) updateData.llmBaseUrl = input.data.llmBaseUrl;
       if (input.data?.portkeyVirtualKey) updateData.portkeyVirtualKey = input.data.portkeyVirtualKey;
 
       // Step 3: Channels
@@ -107,6 +114,10 @@ const workspaceRouter = router({
       if (input.data?.slackBotToken !== undefined) {
         updateData.slackBotToken = input.data.slackBotToken;
         updateData.slackEnabled = !!input.data.slackBotToken;
+      }
+      if (input.data?.whatsappToken !== undefined) {
+        updateData.whatsappToken = input.data.whatsappToken;
+        updateData.whatsappEnabled = !!input.data.whatsappToken;
       }
 
       // Step 4: Provision complete
@@ -165,12 +176,14 @@ const workspaceRouter = router({
       llmProvider: z.string().optional(),
       llmModel: z.string().optional(),
       llmApiKey: z.string().optional(),
+      llmBaseUrl: z.string().optional(),
       telegramBotToken: z.string().optional(),
       telegramEnabled: z.boolean().optional(),
       slackBotToken: z.string().optional(),
       slackEnabled: z.boolean().optional(),
       whatsappToken: z.string().optional(),
       whatsappEnabled: z.boolean().optional(),
+      settings: z.record(z.string(), z.any()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
@@ -364,15 +377,186 @@ const tasksRouter = router({
       return task;
     }),
 });
-
-// ── Audit Router ───────────────────────────────────────────────────────
+// ── Audit Router ─────────────────────────────────────────────────────────────────
 const auditRouter = router({
   list: protectedProcedure
     .input(z.object({ workspaceId: z.number(), limit: z.number().min(1).max(200).optional() }))
     .query(async ({ ctx, input }) => {
       const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
-      if (!membership || membership.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN" });
       return db.getAuditLog(input.workspaceId, input.limit ?? 50);
+    }),
+});
+
+// ── Chat Router ──────────────────────────────────────────────────────────────────
+const chatRouter = router({
+  history: protectedProcedure
+    .input(z.object({ workspaceId: z.number(), limit: z.number().min(1).max(200).optional() }))
+    .query(async ({ ctx, input }) => {
+      const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN" });
+      const messages = await db.getChatMessagesForUser(input.workspaceId, ctx.user.id, input.limit ?? 100);
+      return messages.reverse(); // oldest first for display
+    }),
+
+  send: protectedProcedure
+    .input(z.object({
+      workspaceId: z.number(),
+      message: z.string().min(1).max(10000),
+      agentId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN" });
+
+      // Get workspace LLM config
+      const workspace = await db.getWorkspaceById(input.workspaceId);
+      if (!workspace) throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+
+      // Save user message
+      await db.createChatMessage({
+        workspaceId: input.workspaceId,
+        userId: ctx.user.id,
+        agentId: input.agentId ?? "chief-marketing",
+        role: "user",
+        content: input.message,
+      });
+
+      // Get recent history for context
+      const history = await db.getChatMessagesForUser(input.workspaceId, ctx.user.id, 20);
+
+      // Build system prompt based on agent
+      const agents = await db.getAgentsForWorkspace(input.workspaceId);
+      const targetAgent = agents.find(a => a.agentId === (input.agentId ?? "chief-marketing"));
+      const systemPrompt = `You are ${targetAgent?.name ?? "the Chief Marketing Agent"}, an AI marketing specialist. ${targetAgent?.role ?? "You route tasks, enrich context, and review all output."}\n\nYou are part of a 21-agent marketing team. When the user gives you a marketing task or question, respond helpfully and concisely. If the task should be delegated to a specialist, mention which agent would handle it.\n\nBe direct, strategic, and action-oriented. Use marketing best practices.`;
+
+      // Build messages for LLM
+      const llmMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemPrompt },
+        ...history.map(m => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+        { role: "user", content: input.message },
+      ];
+
+      // Call LLM (uses built-in platform LLM — workspace-specific routing TODO)
+      const response = await invokeLLM({ messages: llmMessages });
+      const rawContent = response.choices?.[0]?.message?.content;
+      const assistantContent = (typeof rawContent === "string" ? rawContent : "") || "I apologize, but I was unable to generate a response. Please try again.";
+
+      // Save assistant response
+      await db.createChatMessage({
+        workspaceId: input.workspaceId,
+        userId: ctx.user.id,
+        agentId: input.agentId ?? "chief-marketing",
+        role: "assistant",
+        content: assistantContent,
+      });
+
+      // Audit
+      await db.createAuditEntry({
+        workspaceId: input.workspaceId,
+        userId: ctx.user.id,
+        action: "chat.message_sent",
+        resource: "chat",
+        details: { agentId: input.agentId ?? "chief-marketing" },
+      });
+
+      return { content: assistantContent, agentId: input.agentId ?? "chief-marketing" };
+    }),
+});
+
+// ── Cron Jobs Router ─────────────────────────────────────────────────────────────
+const cronRouter = router({
+  list: protectedProcedure
+    .input(z.object({ workspaceId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN" });
+      return db.getCronJobsForWorkspace(input.workspaceId);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      workspaceId: z.number(),
+      name: z.string().min(1).max(255),
+      description: z.string().optional(),
+      cronExpression: z.string().min(1),
+      agentId: z.string().optional(),
+      taskTemplate: z.any().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
+      if (!membership || membership.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      const id = await db.createCronJob({
+        workspaceId: input.workspaceId,
+        name: input.name,
+        description: input.description ?? null,
+        cronExpression: input.cronExpression,
+        agentId: input.agentId ?? null,
+        taskTemplate: input.taskTemplate ?? null,
+        createdByUserId: ctx.user.id,
+      });
+
+      await db.createAuditEntry({
+        workspaceId: input.workspaceId,
+        userId: ctx.user.id,
+        action: "cron.created",
+        resource: "cron_job",
+        resourceId: String(id),
+        details: { name: input.name, cronExpression: input.cronExpression },
+      });
+
+      return { id };
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      workspaceId: z.number(),
+      name: z.string().min(1).max(255).optional(),
+      description: z.string().optional(),
+      cronExpression: z.string().optional(),
+      agentId: z.string().optional(),
+      enabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
+      if (!membership || membership.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      const { id, workspaceId, ...updateData } = input;
+      await db.updateCronJob(id, updateData as any);
+
+      await db.createAuditEntry({
+        workspaceId,
+        userId: ctx.user.id,
+        action: "cron.updated",
+        resource: "cron_job",
+        resourceId: String(id),
+      });
+
+      return { success: true };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number(), workspaceId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await db.getUserWorkspaceMembership(input.workspaceId, ctx.user.id);
+      if (!membership || membership.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+
+      await db.deleteCronJob(input.id);
+
+      await db.createAuditEntry({
+        workspaceId: input.workspaceId,
+        userId: ctx.user.id,
+        action: "cron.deleted",
+        resource: "cron_job",
+        resourceId: String(input.id),
+      });
+
+      return { success: true };
     }),
 });
 
@@ -408,22 +592,202 @@ const platformAdminRouter = router({
     }),
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────
+function stripSensitive<T extends Record<string, unknown> | null | undefined>(user: T): T {
+  if (!user) return user;
+  const { passwordHash, ...safe } = user as Record<string, unknown>;
+  return safe as T;
+}
+
 // ── Main Router ────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
+    me: publicProcedure.query((opts) => stripSensitive(opts.ctx.user)),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    register: publicProcedure
+      .input(
+        z.object({
+          email: z.email().transform((v) => v.toLowerCase().trim()),
+          password: z.string().min(8, "Password must be at least 8 characters"),
+          name: z.string().min(1, "Name is required").max(255),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        // Check if email already exists
+        const existing = await db.getUserByEmail(input.email);
+        if (existing) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "An account with this email already exists",
+          });
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(input.password, 12);
+
+        // Generate unique openId for this email-auth user
+        const openId = nanoid(32);
+
+        // Create user
+        const userId = await db.createUserWithPassword({
+          email: input.email,
+          passwordHash,
+          name: input.name,
+          openId,
+        });
+
+        // Issue JWT session cookie
+        const sessionToken = await sdk.createSessionToken(openId, {
+          name: input.name,
+          expiresInMs: ONE_YEAR_MS,
+        });
+
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
+
+        // Send welcome email (fire and forget)
+        sendWelcomeEmail(input.email, input.name).catch((err) =>
+          console.error("[Email] Welcome email failed:", err)
+        );
+
+        // Fetch the full user record to return
+        const user = await db.getUserByOpenId(openId);
+        return stripSensitive(user);
+      }),
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.email().transform((v) => v.toLowerCase().trim()),
+          password: z.string().min(1, "Password is required"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        // Find user by email
+        const user = await db.getUserByEmail(input.email);
+        if (!user || !user.passwordHash) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+
+        // Verify password
+        const valid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!valid) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+
+        // Update last sign-in
+        await db.upsertUser({
+          openId: user.openId,
+          lastSignedIn: new Date(),
+        });
+
+        // Issue JWT session cookie
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
+
+        return stripSensitive(user);
+      }),
+    forgotPassword: publicProcedure
+      .input(z.object({
+        email: z.email().transform((v) => v.toLowerCase().trim()),
+        origin: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Always return success to prevent email enumeration
+        const user = await db.getUserByEmail(input.email);
+        if (!user) return { success: true };
+
+        // Generate a secure token
+        const token = crypto.randomBytes(48).toString("hex");
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        await db.createPasswordResetToken({
+          userId: user.id,
+          token,
+          expiresAt,
+        });
+
+        // Build reset link
+        const origin = input.origin || "https://command.outmarkhq.com";
+        const resetLink = `${origin}/reset-password?token=${token}`;
+
+        // Send password reset email
+        await sendPasswordResetEmail(
+          input.email,
+          user.name ?? "there",
+          resetLink
+        );
+
+        return { success: true };
+      }),
+    resetPassword: publicProcedure
+      .input(
+        z.object({
+          token: z.string().min(1),
+          password: z.string().min(8, "Password must be at least 8 characters"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const resetToken = await db.getPasswordResetToken(input.token);
+        if (!resetToken) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid or expired reset link",
+          });
+        }
+
+        // Check if token is expired
+        if (new Date() > resetToken.expiresAt) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This reset link has expired. Please request a new one.",
+          });
+        }
+
+        // Check if token was already used
+        if (resetToken.usedAt) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This reset link has already been used",
+          });
+        }
+
+        // Hash new password and update user
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        await db.updateUserPassword(resetToken.userId, passwordHash);
+        await db.markTokenUsed(input.token);
+
+        return { success: true };
+      }),
   }),
   workspace: workspaceRouter,
   members: membersRouter,
   agents: agentsRouter,
   tasks: tasksRouter,
   audit: auditRouter,
+  chat: chatRouter,
+  cron: cronRouter,
   admin: platformAdminRouter,
 });
 

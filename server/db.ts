@@ -14,6 +14,10 @@ import {
   InsertTask,
   auditLog,
   InsertAuditLogEntry,
+  chatMessages,
+  InsertChatMessage,
+  cronJobs,
+  InsertCronJob,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -66,6 +70,33 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createUserWithPassword(data: {
+  email: string;
+  passwordHash: string;
+  name: string;
+  openId: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(users).values({
+    openId: data.openId,
+    email: data.email,
+    name: data.name,
+    passwordHash: data.passwordHash,
+    loginMethod: "email",
+    role: "user",
+    lastSignedIn: new Date(),
+  }).$returningId();
+  return result.id;
 }
 
 export async function getAllUsers() {
@@ -267,4 +298,116 @@ export async function getAdminStats() {
     activeWorkspaces: activeWsCount.count,
     totalTasks: taskCount.count,
   };
+}
+
+// ── Chat Messages ─────────────────────────────────────────────────────
+
+export async function createChatMessage(data: InsertChatMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(chatMessages).values(data).$returningId();
+  return result.id;
+}
+
+export async function getChatMessages(workspaceId: number, limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.workspaceId, workspaceId))
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit);
+}
+
+export async function getChatMessagesForUser(workspaceId: number, userId: number, limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.workspaceId, workspaceId), eq(chatMessages.userId, userId)))
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit);
+}
+
+// ── Cron Jobs ─────────────────────────────────────────────────────────
+
+export async function createCronJob(data: InsertCronJob) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(cronJobs).values(data).$returningId();
+  return result.id;
+}
+
+export async function getCronJobsForWorkspace(workspaceId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(cronJobs)
+    .where(eq(cronJobs.workspaceId, workspaceId))
+    .orderBy(desc(cronJobs.createdAt));
+}
+
+export async function getCronJobById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(cronJobs).where(eq(cronJobs.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updateCronJob(id: number, data: Partial<InsertCronJob>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(cronJobs).set(data).where(eq(cronJobs.id, id));
+}
+
+export async function deleteCronJob(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(cronJobs).where(eq(cronJobs.id, id));
+}
+
+// ── Password Reset Tokens ─────────────────────────────────────────────
+
+import { passwordResetTokens, InsertPasswordResetToken } from "../drizzle/schema";
+
+export async function createPasswordResetToken(data: InsertPasswordResetToken) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(passwordResetTokens).values(data);
+}
+
+export async function getPasswordResetToken(token: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.token, token))
+    .limit(1);
+  return result[0];
+}
+
+export async function markTokenUsed(token: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(passwordResetTokens)
+    .set({ usedAt: new Date() })
+    .where(eq(passwordResetTokens.token, token));
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
 }

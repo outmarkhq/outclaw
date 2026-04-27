@@ -23,8 +23,10 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { getLoginUrl } from "@/const";
+
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
+import { toast } from "sonner";
+import { LLM_PROVIDERS, getProvider, getDefaultModel } from "@shared/llmProviders";
 
 const STEPS = [
   { id: 1, title: "Workspace", icon: Globe, desc: "Name your workspace" },
@@ -44,6 +46,7 @@ export default function Onboarding() {
   const [llmProvider, setLlmProvider] = useState("openai");
   const [llmApiKey, setLlmApiKey] = useState("");
   const [llmModel, setLlmModel] = useState("");
+  const [llmBaseUrl, setLlmBaseUrl] = useState("");
   const [telegramToken, setTelegramToken] = useState("");
   const [slackWebhook, setSlackWebhook] = useState("");
   const [whatsappToken, setWhatsappToken] = useState("");
@@ -55,11 +58,23 @@ export default function Onboarding() {
   const provisionWorkspace = trpc.workspace.provision.useMutation();
   const [workspaceId, setWorkspaceId] = useState<number | null>(null);
 
+  // Check if user already has a workspace — redirect to /cc
+  const workspacesQuery = trpc.workspace.list.useQuery(undefined, {
+    enabled: !!user,
+    retry: false,
+  });
+
   useEffect(() => {
     if (!loading && !user) {
-      window.location.href = getLoginUrl();
+      window.location.href = "/login";
     }
   }, [loading, user]);
+
+  useEffect(() => {
+    if (workspacesQuery.data && workspacesQuery.data.length > 0) {
+      setLocation("/cc");
+    }
+  }, [workspacesQuery.data, setLocation]);
 
   if (loading) return <DashboardLayoutSkeleton />;
   if (!user) return null;
@@ -94,24 +109,26 @@ export default function Onboarding() {
       await updateOnboarding.mutateAsync({
         workspaceId: wsId,
         step: 2,
-        data: { llmProvider, llmApiKey, llmModel },
+        data: { llmProvider, llmApiKey, llmModel, llmBaseUrl: llmBaseUrl || undefined },
       });
 
-      // Save channel config
+      // Save channel config (including WhatsApp)
       await updateOnboarding.mutateAsync({
         workspaceId: wsId,
         step: 3,
         data: {
           telegramBotToken: telegramToken || "",
           slackBotToken: slackWebhook || "",
+          whatsappToken: whatsappToken || "",
         },
       });
 
       // Provision agents
       await provisionWorkspace.mutateAsync({ workspaceId: wsId });
       setProvisionComplete(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Provisioning failed:", err);
+      toast.error(err?.message || "Provisioning failed. Please try again.");
     } finally {
       setIsProvisioning(false);
     }
@@ -122,6 +139,8 @@ export default function Onboarding() {
       case 1:
         return workspaceName.length >= 2 && workspaceSlug.length >= 2;
       case 2:
+        // Ollama doesn't need an API key; custom/azure need a base URL
+        if (llmProvider === "ollama") return true;
         return llmApiKey.length > 0;
       case 3:
         return true; // channels are optional
@@ -255,22 +274,17 @@ export default function Onboarding() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-white/60">Provider</Label>
-                  <Select value={llmProvider} onValueChange={setLlmProvider}>
+                  <Select value={llmProvider} onValueChange={(v) => { setLlmProvider(v); setLlmModel(""); }}>
                     <SelectTrigger className="bg-white/[0.04] border-white/10 text-white h-12">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI (GPT-4)</SelectItem>
-                      <SelectItem value="anthropic">
-                        Anthropic (Claude)
-                      </SelectItem>
-                      <SelectItem value="google">
-                        Google (Gemini)
-                      </SelectItem>
-                      <SelectItem value="openrouter">OpenRouter</SelectItem>
-                      <SelectItem value="custom">
-                        Custom (OpenAI-compatible)
-                      </SelectItem>
+                    <SelectContent className="max-h-80">
+                      {LLM_PROVIDERS.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-white/40 ml-1.5 text-xs">{p.description}</span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -283,7 +297,7 @@ export default function Onboarding() {
                       type="password"
                       value={llmApiKey}
                       onChange={(e) => setLlmApiKey(e.target.value)}
-                      placeholder="sk-..."
+                      placeholder={getProvider(llmProvider)?.apiKeyPlaceholder ?? "sk-..."}
                       className="bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 h-12 pl-10"
                     />
                   </div>
@@ -297,17 +311,44 @@ export default function Onboarding() {
                   <Input
                     value={llmModel}
                     onChange={(e) => setLlmModel(e.target.value)}
-                    placeholder={
-                      llmProvider === "anthropic"
-                        ? "claude-sonnet-4-20250514"
-                        : llmProvider === "google"
-                        ? "gemini-2.5-pro"
-                        : "gpt-4o"
-                    }
+                    placeholder={getDefaultModel(llmProvider) || "model-name"}
                     className="bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 h-12"
                   />
                 </div>
+
+                {/* Base URL — only for custom, azure, ollama */}
+                {(llmProvider === "custom" || llmProvider === "azure" || llmProvider === "ollama") && (
+                  <div className="space-y-2">
+                    <Label className="text-white/60">Base URL</Label>
+                    <Input
+                      value={llmBaseUrl}
+                      onChange={(e) => setLlmBaseUrl(e.target.value)}
+                      placeholder={
+                        llmProvider === "ollama"
+                          ? "http://localhost:11434/v1"
+                          : llmProvider === "azure"
+                          ? "https://your-resource.openai.azure.com/openai/deployments/your-deployment"
+                          : "https://api.example.com/v1"
+                      }
+                      className="bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 h-12"
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* Provider docs link */}
+              {getProvider(llmProvider)?.docsUrl && (
+                <div className="flex items-center gap-2">
+                  <a
+                    href={getProvider(llmProvider)!.docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[12px] text-[#F5C542] hover:underline"
+                  >
+                    Get your {getProvider(llmProvider)!.name} API key &rarr;
+                  </a>
+                </div>
+              )}
 
               <div className="p-4 bg-white/[0.03] border border-white/[0.06] rounded-lg">
                 <p className="text-[12px] text-white/30 leading-relaxed">
