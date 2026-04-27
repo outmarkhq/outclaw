@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1775229212480,
+      "tag": "0000_futuristic_pixie",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1775229411559,
+      "tag": "0001_known_timeslip",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775249993439,
+      "tag": "0002_jittery_vulture",
+      "breakpoints": true
+    }
+  ]
+}

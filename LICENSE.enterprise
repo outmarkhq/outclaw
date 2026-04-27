@@ -1,0 +1,27 @@
+Outclaw Enterprise Edition License
+====================================
+
+Copyright (c) 2025 Growth Crystal, Inc.
+
+The Outclaw Enterprise Edition software and associated documentation files
+(the "Enterprise Software") are proprietary to Growth Crystal, Inc.
+
+The Enterprise Software includes all files in the following directories:
+
+  enterprise/
+
+and any files marked with the header:
+
+  "Licensed under the Outclaw Enterprise Edition License"
+
+This Enterprise Software may only be used in production if you hold a valid
+Outclaw Enterprise Edition license purchased from Growth Crystal, Inc.
+
+You may use the Enterprise Software for evaluation and development purposes
+without a license. Production use requires a valid subscription.
+
+For licensing inquiries, contact:
+  nihal@outmarkhq.com
+
+All other components of Outclaw not explicitly listed above are licensed
+under the MIT License (see LICENSE file).
